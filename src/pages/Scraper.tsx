@@ -44,10 +44,16 @@ type ScraperResult = {
   region?: string;
   phone?: string;
   email?: string;
+  line_id?: string;
+  facebook_page?: string;
+  line_followers?: number;
+  pr_articles?: { title: string; url: string }[];
+  pr_count?: number;
   extra_data?: Record<string, unknown>;
   selected?: boolean;
   enriched?: boolean;
   enriching?: boolean;
+  isDuplicate?: boolean;
 };
 
 async function getCurrentOrgInfo() {
@@ -77,8 +83,10 @@ export default function Scraper() {
   const [results, setResults] = useState<ScraperResult[]>([]);
   const [orgType, setOrgType] = useState<'besitfy' | 'insider' | null>(null);
   const [importing, setImporting] = useState(false);
+  const [hideExisting, setHideExisting] = useState(false);
   const queryClient = useQueryClient();
   const createAccount = useCreateAccount();
+  const { data: accounts = [] } = useAccounts();
 
   useEffect(() => {
     getCurrentOrgInfo().then(org => {
@@ -107,11 +115,17 @@ export default function Scraper() {
         body: { industry, region, keywords, org_type: orgType },
       });
       if (error) throw error;
-      const companies = (data?.companies || []).map((c: any) => ({
-        ...c,
-        selected: false,
-        enriched: false,
-      }));
+      const existingNames = new Set(accounts.map(a => a.account_name.toLowerCase().trim()));
+      const existingDomains = new Set(accounts.map(a => {
+        try { return new URL(a.ec_link?.startsWith('http') ? a.ec_link : `https://${a.ec_link || ''}`).hostname.replace('www.', ''); } catch { return ''; }
+      }).filter(Boolean));
+
+      const companies = (data?.companies || []).map((c: any) => {
+        let domain = '';
+        try { domain = new URL(c.website?.startsWith('http') ? c.website : `https://${c.website || ''}`).hostname.replace('www.', ''); } catch {}
+        const isDuplicate = existingNames.has(c.company_name?.toLowerCase().trim()) || (domain && existingDomains.has(domain));
+        return { ...c, selected: false, enriched: false, isDuplicate };
+      });
       setResults(companies);
       setTab('results');
       toast.success(`找到 ${companies.length} 間公司`);
@@ -157,10 +171,13 @@ export default function Scraper() {
           industry: enriched.industry || r.industry,
           phone: enriched.phone || r.phone,
           email: enriched.email || r.email,
+          line_id: enriched.line_id || r.line_id,
+          facebook_page: enriched.facebook_page || r.facebook_page,
+          line_followers: enriched.line_followers || r.line_followers,
+          pr_articles: enriched.pr_articles || r.pr_articles,
+          pr_count: enriched.pr_count || r.pr_count,
           extra_data: {
             ...r.extra_data,
-            ...(enriched.line_followers ? { line_followers: enriched.line_followers } : {}),
-            ...(enriched.line_id ? { line_id: enriched.line_id } : {}),
             ...(enriched.monthly_traffic ? { monthly_traffic: enriched.monthly_traffic } : {}),
             ...(enriched.tech_stack ? { tech_stack: enriched.tech_stack } : {}),
           },
@@ -322,7 +339,7 @@ export default function Scraper() {
         <TabsContent value="results" className="space-y-4">
           {results.length > 0 && (
             <>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between flex-wrap gap-2">
                 <div className="flex items-center gap-3">
                   <Checkbox
                     checked={results.length > 0 && results.every(r => r.selected)}
@@ -330,7 +347,16 @@ export default function Scraper() {
                   />
                   <span className="text-sm text-muted-foreground">
                     {selectedCount > 0 ? `已選 ${selectedCount} 間` : `共 ${results.length} 間公司`}
+                    {results.filter(r => r.isDuplicate).length > 0 && (
+                      <span className="ml-2 text-amber-600">· {results.filter(r => r.isDuplicate).length} 筆已存在</span>
+                    )}
                   </span>
+                  <button
+                    className="text-xs text-primary underline"
+                    onClick={() => setHideExisting(h => !h)}
+                  >
+                    {hideExisting ? '顯示全部' : '隱藏已存在'}
+                  </button>
                 </div>
                 <div className="flex gap-2">
                   <Button
@@ -359,19 +385,21 @@ export default function Scraper() {
               </div>
 
               <div className="space-y-2">
-                {results.map((r, i) => (
-                  <Card key={i} className={r.selected ? 'ring-2 ring-primary' : ''}>
+                {results.filter(r => !hideExisting || !r.isDuplicate).map((r, i) => (
+                  <Card key={i} className={`${r.selected ? 'ring-2 ring-primary' : ''} ${r.isDuplicate ? 'opacity-60' : ''}`}>
                     <CardContent className="py-3 flex items-start gap-3">
                       <Checkbox
                         checked={r.selected}
                         onCheckedChange={() => toggleSelect(i)}
                         className="mt-1"
+                        disabled={r.isDuplicate}
                       />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="font-medium">{r.company_name}</span>
+                          {r.isDuplicate && <Badge className="bg-amber-100 text-amber-800 text-xs">已存在</Badge>}
                           {r.industry && <Badge variant="outline">{r.industry}</Badge>}
-                          {r.enriched && <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">已補充</Badge>}
+                          {r.enriched && <Badge className="bg-green-100 text-green-800">已補充</Badge>}
                           {r.enriching && <Loader2 className="h-3 w-3 animate-spin" />}
                         </div>
                         {r.website && (
@@ -379,23 +407,26 @@ export default function Scraper() {
                             {r.website}
                           </a>
                         )}
-                        {(r.phone || r.email) && (
-                          <div className="flex gap-3 text-xs text-muted-foreground mt-1">
-                            {r.phone && <span>📞 {r.phone}</span>}
-                            {r.email && <a href={`mailto:${r.email}`} className="text-primary hover:underline">✉️ {r.email}</a>}
+                        <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-muted-foreground mt-1">
+                          {r.phone && <span>📞 {r.phone}</span>}
+                          {r.email && <a href={`mailto:${r.email}`} className="text-primary hover:underline">✉️ {r.email}</a>}
+                          {r.line_id && <span>💬 LINE: {r.line_id}</span>}
+                          {r.facebook_page && <a href={r.facebook_page} target="_blank" rel="noopener" className="text-primary hover:underline">📘 粉專</a>}
+                          {r.line_followers != null && <span>👥 LINE粉絲: {r.line_followers.toLocaleString()}</span>}
+                          {r.pr_count != null && <span>📰 PR: {r.pr_count} 篇</span>}
+                        </div>
+                        {r.pr_articles && r.pr_articles.length > 0 && (
+                          <div className="mt-1 space-y-0.5">
+                            {r.pr_articles.slice(0, 3).map((a, idx) => (
+                              <a key={idx} href={a.url} target="_blank" rel="noopener"
+                                className="text-xs text-primary hover:underline block truncate">
+                                📰 {a.title}
+                              </a>
+                            ))}
                           </div>
                         )}
                         {r.description && (
-                          <p className="text-sm text-muted-foreground mt-1">{r.description}</p>
-                        )}
-                        {r.extra_data && Object.keys(r.extra_data).length > 0 && (
-                          <div className="flex gap-2 mt-1 flex-wrap">
-                            {Object.entries(r.extra_data).map(([k, v]) => (
-                              v != null && <Badge key={k} variant="secondary" className="text-xs">
-                                {k}: {String(v)}
-                              </Badge>
-                            ))}
-                          </div>
+                          <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{r.description}</p>
                         )}
                       </div>
                     </CardContent>
