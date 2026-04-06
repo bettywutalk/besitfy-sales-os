@@ -28,6 +28,15 @@ export default function Auth() {
   const [newPasswordConfirm, setNewPasswordConfirm] = useState('');
   const isRecovery = searchParams.get('recovery') === '1';
 
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        navigate('/auth?recovery=1', { replace: true });
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
   const handleUpdatePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (newPassword !== newPasswordConfirm) {
