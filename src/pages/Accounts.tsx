@@ -58,30 +58,6 @@ export default function Accounts() {
     }
   };
 
-  const handleEnrich = async (accountsToEnrich: Account[]) => {
-    if (accountsToEnrich.length === 0) return;
-    setEnriching(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('enrich-account', {
-        body: {
-          accounts: accountsToEnrich.map(a => ({
-            id: a.id,
-            account_name: a.account_name,
-            country: a.country,
-          })),
-        },
-      });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-      setEnrichResults(data.results || []);
-      setShowEnrichDialog(true);
-    } catch (err: any) {
-      toast.error('AI 補齊失敗', { description: err.message });
-    } finally {
-      setEnriching(false);
-    }
-  };
-
   const extractDomain = (url: string): string => {
     try {
       const u = new URL(url.startsWith('http') ? url : `https://${url}`);
@@ -189,13 +165,6 @@ export default function Accounts() {
         )}
       </div>
     );
-  };
-
-  const handleApplyAll = async () => {
-    for (const result of enrichResults) {
-      await handleApplyEnrich(result);
-    }
-    setShowEnrichDialog(false);
   };
 
   const toggleSort = (field: SortField) => {
