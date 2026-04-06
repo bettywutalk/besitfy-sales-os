@@ -17,6 +17,7 @@ import Segments from "./pages/Segments";
 import Events from "./pages/Events";
 import Scraper from "./pages/Scraper";
 
+import BonusDashboard from "./pages/BonusDashboard";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
@@ -60,6 +61,7 @@ const App = () => (
             <Route path="/segments" element={<Segments />} />
             <Route path="/events" element={<Events />} />
             <Route path="/scraper" element={<Scraper />} />
+            <Route path="/bonus" element={<BonusDashboard />} />
             {/* Partners page removed */}
             <Route path="/settings" element={<Settings />} />
           </Route>

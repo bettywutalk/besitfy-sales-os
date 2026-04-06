@@ -1,4 +1,4 @@
-import { Building2, Users, Target, Filter, Calendar, LogOut, ChevronDown, ChevronsUpDown, Settings, LayoutDashboard, Home, UserCheck, Search } from 'lucide-react';
+import { Building2, Users, Target, Filter, Calendar, LogOut, ChevronDown, ChevronsUpDown, Settings, LayoutDashboard, Home, UserCheck, Search, DollarSign } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useLocation } from 'react-router-dom';
 import {
@@ -19,6 +19,7 @@ const baseNavItems = [
   { title: 'Segments', url: '/segments', icon: Filter },
   { title: 'Events', url: '/events', icon: Calendar },
   { title: 'Scraper', url: '/scraper', icon: Search },
+  { title: '獎金', url: '/bonus', icon: DollarSign },
 ];
 
 const adminNavItems = [
