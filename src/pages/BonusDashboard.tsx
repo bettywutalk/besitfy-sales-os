@@ -235,22 +235,20 @@ export default function BonusDashboard() {
   }
 
   async function handleAddProduct() {
-    if (!prodName) { toast.error('請輸入產品名稱'); return; }
+    if (!prodName || !prodBonus) { toast.error('請輸入產品名稱與獎金金額'); return; }
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
     const { data: profile } = await supabase.from('profiles').select('current_org_id').eq('id', user.id).single();
     const { error } = await supabase.from('commission_products').insert({
       org_id: profile?.current_org_id,
       name: prodName,
-      commission_rate: prodRate ? parseFloat(prodRate) / 100 : null,
-      base_bonus: prodBonus ? parseFloat(prodBonus) : null,
-      is_variable: prodVariable,
+      base_bonus: parseFloat(prodBonus),
       notes: prodNotes || null,
     });
     if (error) { toast.error('新增失敗'); return; }
     toast.success('產品已新增');
     setShowAddProduct(false);
-    setProdName(''); setProdRate(''); setProdBonus(''); setProdVariable(false); setProdNotes('');
+    setProdName(''); setProdBonus(''); setProdNotes('');
     loadData();
   }
 
@@ -408,25 +406,15 @@ export default function BonusDashboard() {
                 <Button variant="outline" size="sm"><Plus className="h-3.5 w-3.5 mr-1" />管理產品</Button>
               </DialogTrigger>
               <DialogContent>
-                <DialogHeader><DialogTitle>新增產品分潤設定</DialogTitle></DialogHeader>
+                <DialogHeader><DialogTitle>新增產品設定</DialogTitle></DialogHeader>
                 <div className="space-y-3 pt-2">
                   <div className="space-y-1">
                     <Label>產品名稱 *</Label>
                     <Input placeholder="e.g. 好廣告" value={prodName} onChange={e => setProdName(e.target.value)} />
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="space-y-1">
-                      <Label>分潤比例 (%)</Label>
-                      <Input placeholder="e.g. 15" value={prodRate} onChange={e => setProdRate(e.target.value)} />
-                    </div>
-                    <div className="space-y-1">
-                      <Label>簽約獎金/單</Label>
-                      <Input placeholder="e.g. 12825" value={prodBonus} onChange={e => setProdBonus(e.target.value)} />
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <input type="checkbox" id="variable" checked={prodVariable} onChange={e => setProdVariable(e.target.checked)} />
-                    <Label htmlFor="variable">金額不固定（依合約計算）</Label>
+                  <div className="space-y-1">
+                    <Label>簽約獎金/單 *</Label>
+                    <Input placeholder="e.g. 12825" value={prodBonus} onChange={e => setProdBonus(e.target.value)} />
                   </div>
                   <div className="space-y-1">
                     <Label>備註</Label>
@@ -441,8 +429,7 @@ export default function BonusDashboard() {
                       <div key={p.id} className="flex items-center justify-between text-sm py-1 border-b last:border-0">
                         <span className="font-medium">{p.name}</span>
                         <span className="text-muted-foreground">
-                          {p.commission_rate ? `${Math.round(p.commission_rate * 100)}%` : '—'}
-                          {p.base_bonus ? ` / ${p.base_bonus.toLocaleString()}` : ''}
+                          {p.base_bonus ? `NT$ ${p.base_bonus.toLocaleString()} / 單` : '—'}
                         </span>
                       </div>
                     ))}
@@ -529,10 +516,8 @@ export default function BonusDashboard() {
                 <div key={p.id} className="rounded-lg border p-3 space-y-1.5">
                   <div className="font-semibold">{p.name}</div>
                   <div className="text-sm text-muted-foreground space-y-0.5">
-                    {p.commission_rate && <div>分潤比例：{Math.round(p.commission_rate * 100)}%</div>}
-                    {p.base_bonus && <div>簽約獎金：{p.base_bonus.toLocaleString()} / 單</div>}
+                    {p.base_bonus && <div className="font-medium text-foreground">NT$ {p.base_bonus.toLocaleString()} / 單</div>}
                     {p.notes && <div className="text-xs">{p.notes}</div>}
-                    <div className="text-xs">{p.is_variable ? '金額不固定，依合約為主' : '金額固定'}</div>
                   </div>
                 </div>
               ))}
