@@ -24,6 +24,13 @@ export default function SelectOrg() {
   const [creating, setCreating] = useState(false);
 
   useEffect(() => {
+    // 先檢查現有 session 是否為 recovery 類型
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if ((session as any)?.user?.aud === 'authenticated' && window.location.hash.includes('type=recovery')) {
+        navigate('/auth?recovery=1', { replace: true });
+        return;
+      }
+    });
     // 攔截 PASSWORD_RECOVERY 事件，避免被帶到選組織頁
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'PASSWORD_RECOVERY') {

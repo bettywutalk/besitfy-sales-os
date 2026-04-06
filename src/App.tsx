@@ -25,6 +25,11 @@ const queryClient = new QueryClient();
 function RecoveryRedirect() {
   const navigate = useNavigate();
   useEffect(() => {
+    // 頁面載入時，若 URL hash 含有 recovery token，立即導向
+    if (window.location.hash.includes('type=recovery')) {
+      navigate('/auth?recovery=1', { replace: true });
+      return;
+    }
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'PASSWORD_RECOVERY') {
         navigate('/auth?recovery=1', { replace: true });
