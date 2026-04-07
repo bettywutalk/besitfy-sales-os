@@ -44,6 +44,7 @@ type ScraperResult = {
   region?: string;
   phone?: string;
   email?: string;
+  emails?: string[];
   line_id?: string;
   facebook_page?: string;
   line_followers?: number;
@@ -171,6 +172,7 @@ export default function Scraper() {
           industry: enriched.industry || r.industry,
           phone: enriched.phone || r.phone,
           email: enriched.email || r.email,
+          emails: enriched.emails || r.emails,
           line_id: enriched.line_id || r.line_id,
           facebook_page: enriched.facebook_page || r.facebook_page,
           line_followers: enriched.line_followers || r.line_followers,
@@ -409,7 +411,12 @@ export default function Scraper() {
                         )}
                         <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-muted-foreground mt-1">
                           {r.phone && <span>📞 {r.phone}</span>}
-                          {r.email && <a href={`mailto:${r.email}`} className="text-primary hover:underline">✉️ {r.email}</a>}
+                          {r.emails && r.emails.length > 0
+                            ? r.emails.map((em, ei) => (
+                                <a key={ei} href={`mailto:${em}`} className="text-primary hover:underline">✉️ {em}</a>
+                              ))
+                            : r.email && <a href={`mailto:${r.email}`} className="text-primary hover:underline">✉️ {r.email}</a>
+                          }
                           {r.line_id && <span>💬 LINE: {r.line_id}</span>}
                           {r.facebook_page && <a href={r.facebook_page} target="_blank" rel="noopener" className="text-primary hover:underline">📘 粉專</a>}
                           {r.line_followers != null && <span>👥 LINE粉絲: {r.line_followers.toLocaleString()}</span>}

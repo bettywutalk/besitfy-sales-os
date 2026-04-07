@@ -72,6 +72,12 @@ Deno.serve(async (req) => {
 - tech_stack: 使用的技術或平台（如果能看出來的話）`;
         }
 
+        // Also extract all emails via regex from raw markdown
+        const emailRegex = /[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g;
+        const allEmails = [...new Set(markdown.match(emailRegex) || [])].filter(e =>
+          !e.includes('example.com') && !e.includes('sentry') && !e.includes('wix') && !e.includes('wordpress')
+        );
+
         const aiRes = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
           method: 'POST',
           headers: {
@@ -88,7 +94,8 @@ Deno.serve(async (req) => {
   "company_name": "公司名稱",
   "industry": "產業分類",
   "description": "簡短描述",
-  "email": "聯繫 email（如有）",
+  "email": "主要聯繫 email（如有）",
+  "emails": ["所有找到的 email 陣列，可能有多個"],
   "phone": "電話（如有）",
   "address": "地址（如有）",
   ${extraPrompt}
@@ -104,10 +111,16 @@ Deno.serve(async (req) => {
         const aiData = await aiRes.json();
         const enriched = JSON.parse(aiData.choices?.[0]?.message?.content || '{}');
 
+        // Merge AI emails + regex emails, deduplicate
+        const aiEmails: string[] = enriched.emails || (enriched.email ? [enriched.email] : []);
+        const mergedEmails = [...new Set([...aiEmails, ...allEmails])];
+
         results.push({
           original_index: site.index,
           url: formattedUrl,
           ...enriched,
+          emails: mergedEmails,
+          email: mergedEmails[0] || enriched.email || null,
           scraped: true,
         });
       } catch (err) {
