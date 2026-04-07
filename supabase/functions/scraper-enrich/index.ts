@@ -65,8 +65,8 @@ Deno.serve(async (req) => {
         // Use AI to extract structured info
         let extraPrompt = '';
         if (org_type === 'besitfy') {
-          extraPrompt = `- line_followers: LINE 官方帳號粉絲數（如果頁面有提到的話，否則填 null）
-- line_id: LINE 官方帳號 ID（如果有的話）`;
+          extraPrompt = `- line_id: LINE 官方帳號 ID（例如 @abc123，如果頁面有 line.me 或 @帳號 連結，否則填 null）
+- facebook_page: Facebook 粉絲專頁完整 URL（如果有 facebook.com 連結，否則填 null）`;
         } else {
           extraPrompt = `- monthly_traffic: 估算月流量（如果頁面有提到的話，否則填 null）
 - tech_stack: 使用的技術或平台（如果能看出來的話）`;
